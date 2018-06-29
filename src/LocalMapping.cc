@@ -24,6 +24,9 @@
 #include "Optimizer.h"
 
 #include<mutex>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace ORB_SLAM2
 {
@@ -44,6 +47,11 @@ void LocalMapping::SetTracker(Tracking *pTracker)
     mpTracker=pTracker;
 }
 
+void LocalMapping::SetVoting(Voting *pVotingScheme)
+{
+	mpVotingScheme=pVotingScheme;
+}
+
 void LocalMapping::Run()
 {
 
@@ -51,7 +59,8 @@ void LocalMapping::Run()
 
     while(1)
     {
-        // Tracking will see that Local Mapping is busy
+
+    	// Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(false);
 
         // Check if there are keyframes in the queue
@@ -84,7 +93,7 @@ void LocalMapping::Run()
                 KeyFrameCulling();
             }
 
-            mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
+            mpVotingScheme->InsertKeyFrame(mpCurrentKeyFrame);
         }
         else if(Stop())
         {

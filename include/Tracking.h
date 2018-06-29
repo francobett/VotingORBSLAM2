@@ -29,6 +29,7 @@
 #include"FrameDrawer.h"
 #include"Map.h"
 #include"LocalMapping.h"
+#include"Voting.h"
 #include"LoopClosing.h"
 #include"Frame.h"
 #include "ORBVocabulary.h"
@@ -47,6 +48,7 @@ class Viewer;
 class FrameDrawer;
 class Map;
 class LocalMapping;
+class Voting;
 class LoopClosing;
 class System;
 
@@ -63,6 +65,7 @@ public:
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
+    void SetVoting(Voting* pVotingScheme);
     void SetLoopClosing(LoopClosing* pLoopClosing);
     void SetViewer(Viewer* pViewer);
 
@@ -152,6 +155,7 @@ protected:
 
     //Other Thread Pointers
     LocalMapping* mpLocalMapper;
+    Voting* mpVotingScheme;
     LoopClosing* mpLoopClosing;
 
     //ORB

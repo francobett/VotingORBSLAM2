@@ -24,6 +24,7 @@
 #include "KeyFrame.h"
 #include "Map.h"
 #include "LoopClosing.h"
+#include "Voting.h"
 #include "Tracking.h"
 #include "KeyFrameDatabase.h"
 
@@ -34,6 +35,7 @@ namespace ORB_SLAM2
 {
 
 class Tracking;
+class Voting;
 class LoopClosing;
 class Map;
 
@@ -45,6 +47,8 @@ public:
     void SetLoopCloser(LoopClosing* pLoopCloser);
 
     void SetTracker(Tracking* pTracker);
+
+    void SetVoting(Voting* pVotingScheme);
 
     // Main function
     void Run();
@@ -101,6 +105,7 @@ protected:
 
     Map* mpMap;
 
+    Voting* mpVotingScheme;
     LoopClosing* mpLoopCloser;
     Tracking* mpTracker;
 

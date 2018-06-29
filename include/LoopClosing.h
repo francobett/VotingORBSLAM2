@@ -23,6 +23,7 @@
 
 #include "KeyFrame.h"
 #include "LocalMapping.h"
+#include "Voting.h"
 #include "Map.h"
 #include "ORBVocabulary.h"
 #include "Tracking.h"
@@ -56,6 +57,8 @@ public:
     void SetTracker(Tracking* pTracker);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
+
+    void SetVoting(Voting* pVotingScheme);
 
     // Main function
     void Run();
@@ -109,6 +112,8 @@ protected:
 
     KeyFrameDatabase* mpKeyFrameDB;
     ORBVocabulary* mpORBVocabulary;
+
+    Voting* mpVotingScheme;
 
     LocalMapping *mpLocalMapper;
 

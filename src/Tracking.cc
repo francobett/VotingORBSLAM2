@@ -32,6 +32,9 @@
 
 #include"Optimizer.h"
 #include"PnPsolver.h"
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include<iostream>
 
@@ -151,6 +154,11 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
 {
     mpLocalMapper=pLocalMapper;
+}
+
+void Tracking::SetVoting(Voting *pVotingScheme)
+{
+	mpVotingScheme=pVotingScheme;
 }
 
 void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)

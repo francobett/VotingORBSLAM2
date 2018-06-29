@@ -31,6 +31,7 @@
 #include "MapDrawer.h"
 #include "Map.h"
 #include "LocalMapping.h"
+#include "Voting.h"
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
@@ -44,6 +45,7 @@ class FrameDrawer;
 class Map;
 class Tracking;
 class LocalMapping;
+class Voting;
 class LoopClosing;
 
 class System
@@ -144,6 +146,9 @@ private:
     // Local Mapper. It manages the local map and performs local bundle adjustment.
     LocalMapping* mpLocalMapper;
 
+    // Voting Scheme .
+    Voting* mpVotingScheme;
+
     // Loop Closer. It searches loops with every new keyframe. If there is a loop it performs
     // a pose graph optimization and full bundle adjustment (in a new thread) afterwards.
     LoopClosing* mpLoopCloser;
@@ -154,9 +159,10 @@ private:
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
 
-    // System threads: Local Mapping, Loop Closing, Viewer.
+    // System threads: Local Mapping, Voting, Loop Closing, Viewer.
     // The Tracking thread "lives" in the main execution thread that creates the System object.
     std::thread* mptLocalMapping;
+    std::thread* mptVotingScheme;
     std::thread* mptLoopClosing;
     std::thread* mptViewer;
 

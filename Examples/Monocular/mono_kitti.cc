@@ -24,6 +24,9 @@
 #include<fstream>
 #include<chrono>
 #include<iomanip>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include<opencv2/core/core.hpp>
 

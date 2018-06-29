@@ -30,7 +30,9 @@
 
 #include<mutex>
 #include<thread>
-
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace ORB_SLAM2
 {
@@ -51,6 +53,11 @@ void LoopClosing::SetTracker(Tracking *pTracker)
 void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
 {
     mpLocalMapper=pLocalMapper;
+}
+
+void LoopClosing::SetVoting(Voting *pVotingScheme)
+{
+	mpVotingScheme=pVotingScheme;
 }
 
 
