@@ -43,7 +43,7 @@ class KeyFrameDatabase;
 class KeyFrame
 {
 public:
-    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB);
+    KeyFrame(Frame &F, Map* pMap, KeyFrameDatabase* pKFDB, cv::Mat img);
 
     // Pose functions
     void SetPose(const cv::Mat &Tcw);
@@ -116,6 +116,9 @@ public:
         return pKF1->mnId<pKF2->mnId;
     }
 
+	const cv::Mat getImGray() const {
+		return imGray.clone();
+	}
 
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
 public:
@@ -188,6 +191,8 @@ public:
     const int mnMaxY;
     const cv::Mat mK;
 
+    // Image en la escala de grises
+    cv::Mat imGray;
 
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
@@ -196,6 +201,8 @@ protected:
     cv::Mat Tcw;
     cv::Mat Twc;
     cv::Mat Ow;
+
+
 
     cv::Mat Cw; // Stereo middel point. Only for visualization
 

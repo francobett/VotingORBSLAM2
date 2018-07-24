@@ -39,6 +39,12 @@ public:
 	// Main Function
 	void Run();
 
+	// Runs a classification algorithm to know what KeyPoints on KeyFrame are bud
+	void ClassifyKeyFrame();
+
+	// Runs the classifier of patches
+	bool PatchClass(cv::Mat descriptors, string modelsPath, int dictSize, int iter, char* rFile) ;
+
 	// Function that is called by LocalMapping for insert the new keyframe from that thread to Voting thread
 	void InsertKeyFrame(KeyFrame *pKF);
 
@@ -65,10 +71,20 @@ protected:
 	std::mutex mMutexVotingQueue;
 
 	// List of New Keyframes
+	// TODO add hardcodeo con imágenes de yemas
 	std::list<KeyFrame*> mlKeyFramesVotingQueue;
 
 	// Current KeyFrame for one iteration
 	KeyFrame* mpCurrentKeyFrame;
+
+	// KeyPoints of Current KeyFrame
+	std::vector<cv::KeyPoint> mpCurrentKeyFrameKeyPoints;
+	// MapPoints of Current KeyFrame
+	std::set<MapPoint*> mpCurrentKeyFrameMapPoints;
+
+	// Descriptors of the keypoints of the current KeyFrame
+	cv::Mat mCurrentKeyFrameDescriptors;
+
 
 	// For reset
 	void ResetIfRequested();
