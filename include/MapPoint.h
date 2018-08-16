@@ -109,6 +109,10 @@ public:
     cv::Mat mPosGBA;
     long unsigned int mnBAGlobalForKF;
 
+    // Variables used by voting scheme
+    int positiveVotes;
+    int totalVotes;
+
 
     static std::mutex mGlobalMutex;
 

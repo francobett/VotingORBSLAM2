@@ -13,12 +13,14 @@
 #include "Tracking.h"
 #include "KeyFrame.h"
 #include "KeyFrameDatabase.h"
+#include"ORBmatcher.h"
+#include"Frame.h"
 #include <mutex>
 
 namespace ORB_SLAM2
 {
 
-// TODO importar clases a utilizar por este hilo
+
 class Tracking;
 class LocalMapping;
 class LoopClosing;
@@ -43,7 +45,7 @@ public:
 	void ClassifyKeyFrame();
 
 	// Runs the classifier of patches
-	bool PatchClass(cv::Mat descriptors, string modelsPath, int dictSize, int iter, char* rFile) ;
+	bool PatchClass(cv::Mat descriptors, string modelsPath, int dictSize, int iter, char* salida, char* rFile) ;
 
 	// Function that is called by LocalMapping for insert the new keyframe from that thread to Voting thread
 	void InsertKeyFrame(KeyFrame *pKF);
@@ -60,6 +62,7 @@ public:
 	        return mlKeyFramesVotingQueue.size();
 	    }
 
+
 protected:
 	// Verify if there is some KF in the queue
 	bool CheckNewKeyFrames();
@@ -71,7 +74,6 @@ protected:
 	std::mutex mMutexVotingQueue;
 
 	// List of New Keyframes
-	// TODO add hardcodeo con imágenes de yemas
 	std::list<KeyFrame*> mlKeyFramesVotingQueue;
 
 	// Current KeyFrame for one iteration
@@ -80,7 +82,7 @@ protected:
 	// KeyPoints of Current KeyFrame
 	std::vector<cv::KeyPoint> mpCurrentKeyFrameKeyPoints;
 	// MapPoints of Current KeyFrame
-	std::set<MapPoint*> mpCurrentKeyFrameMapPoints;
+	std::vector<MapPoint*> mpCurrentKeyFrameMapPoints;
 
 	// Descriptors of the keypoints of the current KeyFrame
 	cv::Mat mCurrentKeyFrameDescriptors;

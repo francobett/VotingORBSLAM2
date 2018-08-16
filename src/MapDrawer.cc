@@ -66,12 +66,38 @@ void MapDrawer::DrawMapPoints()
 
     glPointSize(mPointSize);
     glBegin(GL_POINTS);
-    glColor3f(1.0,0.0,0.0);
+    // Values of RGB scale for MapPoint by default
+    float green = 0.0, blue = 0.0, red = 1.0;
+
+	// Threshold of Voting
+	float thresholdVoting = 0.8;
 
     for(set<MapPoint*>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
     {
         if((*sit)->isBad())
             continue;
+        // Get positive and total Votes from actual MapPoint
+        float totalVotes = (*sit) -> totalVotes;
+		float positiveVotes = (*sit) -> positiveVotes;
+
+		// If there are more than zero votes
+		if(totalVotes > 0){
+			// And the positives votes bigger than thresholdVoting
+			if((positiveVotes / totalVotes) >= thresholdVoting){
+				red = 0.0;
+				green = 1.0;
+				blue = 0.0;
+			}else{
+				red = 1.0;
+				green = 0.0;
+				blue = 0.0;
+			}
+		}else{
+			red = 1.0;
+			green = 0.0;
+			blue = 0.0;
+		}
+		glColor3f(red,green,blue);
         cv::Mat pos = (*sit)->GetWorldPos();
         glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
 

@@ -15,6 +15,8 @@
 #include <vector>
 #include <limits>
 #include <stdexcept>
+#include"ORBmatcher.h"
+#include"Frame.h"
 
 #include <opencv/cv.h>
 #include <opencv2/core/core.hpp>
@@ -67,7 +69,7 @@ void Voting::Run()
 
 	cout << "Voting Scheme Loaded!" << endl;
 
-	int contador = 0;
+	int contador = 1;
 
 	while(1)
 	{
@@ -80,7 +82,7 @@ void Voting::Run()
 
 			ProcessNewKeyFrame();
 
-			cout << "KeyFrame detected on Voting: " << contador << endl;
+			cout << endl << endl << "KeyFrame detected on Voting: " << contador << " ID KF: "<< mpCurrentKeyFrame -> mnId << endl;
 			contador += 1;
 
 			ClassifyKeyFrame();
@@ -101,7 +103,7 @@ void Voting::Run()
 
 		ResetIfRequested();
 
-		// Local Mapping will see that Voting is busy
+		// Local Mapping will see that Voting is free
 		SetAcceptKeyFrames(true);
 
 		if(CheckFinish())
@@ -109,7 +111,7 @@ void Voting::Run()
 
 		usleep(3000);
 	}
-
+	cout << "Se procesaron " << contador << "key frames" << endl;
 	SetFinish();
 
 
@@ -118,15 +120,18 @@ void Voting::Run()
 
 void Voting::ClassifyKeyFrame()
 {
-	/*TODO
-	 * Implementación EJECUTAR ALGORITMO DE CLASIFICACIÓN SOBRE KeyFrameActual
-	 * Y ESTABLECER QUE KeyPoints PERTENECEN A PATCHES CLASIFICADOS COMO YEMA.
-	*/
-
-
 	cout << "El keyframe tiene keypoints: " << mpCurrentKeyFrameKeyPoints.size()  << endl;
 
 	// Variables to use
+
+	// Key Points of the current KeyFrame
+	mpCurrentKeyFrameKeyPoints = mpCurrentKeyFrame -> mvKeys;
+
+	// Map Points of the current KeyFrame
+	mpCurrentKeyFrameMapPoints = mpCurrentKeyFrame -> mvpMapPoints;
+
+	// Image of the keyframe
+	cv::Mat img = mpCurrentKeyFrame -> imGray ;
 
 	// xWindow is the width (ancho) of the patch
 	int xWindow = 300;
@@ -146,12 +151,20 @@ void Voting::ClassifyKeyFrame()
 	// heightImg is the height (alto) of the image
 	int heightImg = 1280;
 
-	// .R file TODO
-	char* rFile = "./patchClass.r";
+	// route of the .csv generated
+	char* rutaOut = "/home/beto/ORB-SLAM/Clasificator/";
+
+	// .R file
+	char* rFile = "/home/beto/ORB-SLAM/ORB_SLAM2/patchClass.R";
+
+	// Threshold Voting
+	double thresholdVoting = 0.5;
 
 	// Vector that has the start of the patches of the image
 	std::vector<Point2f> initPatches;
 
+
+	// TODO Verificar que los patches esten bien ya que siempre se exceden 5 que no tienen kpoints
 	// Set the upper left corner of the patches
 	for(int j=0;j<heightImg/despY;j++){ // Divide by patches in height
 		for(int i=0; i<widthImg/despX ;i++){ // Divide by patches in width
@@ -171,17 +184,66 @@ void Voting::ClassifyKeyFrame()
 		}
 	}
 
-	// Get the keypoints of the image
-	cv::Mat img = mpCurrentKeyFrame -> imGray ;
 
-	// Get KeyPoints of current keyframe
-	mpCurrentKeyFrameKeyPoints = mpCurrentKeyFrame -> mvKeys;
+	// Calculate keypoints and descriptors
+	Ptr<SIFT> edetector = xfeatures2d::SIFT::create(); // ****
+	//Ptr<FeatureDetector> edetector = ORB::create();
+	//vector<Mat> descriptorImages;
+	vector<Mat> keypointsCount;
 
-	// Get Descriptors of current keyframe
-	mCurrentKeyFrameDescriptors = mpCurrentKeyFrame -> mDescriptors;
+	//Var for KeyPoints of the image
+	vector<KeyPoint> keypointsImg;
+
+	// Set the keypoints with the detector
+	edetector -> detect( img, keypointsImg );  // ****
+
+	cout << "SIFT has detected: "<< keypointsImg.size() << " keypoints in this keyframe" << endl << endl;
+	//Mat for the descriptor of the image
+	Mat descriptor;
+
+
+	keypointsCount.push_back(descriptor);
+
+
+	edetector->compute(img, keypointsImg, descriptor);
+
+	//New matrix of Nx8 where N is the amount of keypoints
+	Mat coordKP(descriptor.rows, 8, descriptor.type());
+
+
+	// For each row, set the coords
+	for (int i = 0; i < coordKP.rows; i++) {
+		coordKP.at<float>(i, 0) = keypointsImg[i].pt.x;
+		coordKP.at<float>(i, 1) = keypointsImg[i].pt.y;
+		// This column is for saving the landmark en el flannmatcher
+		coordKP.at<float>(i,2)    = -1.0;
+		coordKP.at<float>(i, 3) = keypointsImg[i].angle;
+		coordKP.at<float>(i, 4) = keypointsImg[i].class_id;
+		coordKP.at<float>(i, 5) = keypointsImg[i].octave;
+		coordKP.at<float>(i, 6) = keypointsImg[i].response;
+		coordKP.at<float>(i, 7) = keypointsImg[i].size;
+	}
+
+
+
+
+	/* Concat coordKP and descriptor, and the result its in descriptor
+	* rows[coordKP] = rows[descriptor]
+	 *columns[descriptor] (after hconcat) = columns[descriptor] + columns[coordKP]*/
+	hconcat(coordKP, descriptor, descriptor);
+
+	// Add matrix descriptor, to the vector of descriptors
+	//descriptorImages.push_back(descriptor);
+
+
+
+	// Matrix with info about coords X,Y
+	Mat coor = descriptor.colRange(0,2).clone();
+	// Matrix with info about descriptor
+	Mat desc = descriptor.colRange(8, descriptor.cols).clone();
 
 	// For each patch of the current image
-	for(unsigned i =0; i<=initPatches.size(); i++){
+	for(int i =0; i<initPatches.size(); i++){
 		// Matrix where each row has a descriptor of the KeyPoint that is inside of the patch
 		Mat descriptorsPatch;
 
@@ -189,69 +251,93 @@ void Voting::ClassifyKeyFrame()
 		Mat coordsPatch;
 
 		// For each keypoint in current keyframe, verify if is inside the patch
-		for(unsigned j = 0; j <= mpCurrentKeyFrameKeyPoints.size(); j ++){
+		for(int j = 0; j < descriptor.rows; j ++){
 
-			if( mpCurrentKeyFrameKeyPoints[j].pt.x > initPatches[i].x && // X  > X  of the start of the patch
-				mpCurrentKeyFrameKeyPoints[j].pt.x < initPatches[i].x + xWindow && // X  <  X  of the end of the patch
-				mpCurrentKeyFrameKeyPoints[j].pt.y > initPatches[i].y && // Y  >  Y  of the start of the patch
-				mpCurrentKeyFrameKeyPoints[j].pt.y < initPatches[i].y+yWindow){ // Y  <  Y  of the end of the patch
+			if( descriptor.at<float>(j,0) > initPatches[i].x && // X  > X  of the start of the patch
+				descriptor.at<float>(j,0) < initPatches[i].x + xWindow && // X  <  X  of the end of the patch
+				descriptor.at<float>(j,1)  > initPatches[i].y && // Y  >  Y  of the start of the patch
+				descriptor.at<float>(j,1)  < initPatches[i].y+yWindow){ // Y  <  Y  of the end of the patch
 
 				//Add descriptor of that keypoint to current patch
-				descriptorsPatch.push_back(mCurrentKeyFrameDescriptors.row(j));
+				descriptorsPatch.push_back(desc.row(j));
 
 				//Add coords of keypoint to coordsPatch
-				//Mat coordsKeyPoint = Mat(mpCurrentKeyFrameKeyPoints[j].pt.x,mpCurrentKeyFrameKeyPoints[j].pt.y);
-				//coordsPatch.push_back(coordsKeyPoint);
+				coordsPatch.push_back(coor.row(j));
 			}
 		}
 
 
 		//Classification
-		string modelsPath = "../Clasificator/modelos/";
+		string modelsPath = "/home/beto/ORB-SLAM/Clasificator/modelos/";
 		int dictSize = 25;
 		int iter = 1;
 		// Call PatchClass function
-		bool pred = this -> PatchClass(descriptorsPatch,modelsPath,dictSize,iter, rFile);
+		bool pred = this -> PatchClass(descriptorsPatch,modelsPath,dictSize,iter, rutaOut, rFile);
 
+		// Verify the keypoints of keyframe inside of the current patch
+
+		// For each Keypoints of keyframe (orb)
+		for(unsigned j = 0; j <= mpCurrentKeyFrameKeyPoints.size(); j ++){
+
+			// If its inside the patch
+			if( mpCurrentKeyFrameKeyPoints[j].pt.x > initPatches[i].x && // X  > X  of the start of the patch
+				mpCurrentKeyFrameKeyPoints[j].pt.x < initPatches[i].x + xWindow && // X  <  X  of the end of the patch
+				mpCurrentKeyFrameKeyPoints[j].pt.y > initPatches[i].y && // Y  >  Y  of the start of the patch
+				mpCurrentKeyFrameKeyPoints[j].pt.y < initPatches[i].y+yWindow){ // Y  <  Y  of the end of the patch
+
+
+
+				// If the position J has a mapPoint and this its not bad
+				if( mpCurrentKeyFrameMapPoints[j] != NULL && !(mpCurrentKeyFrameMapPoints[j] -> isBad())){
+					// Get total votes and positive votes from MapPoint J
+					int &totalVotes = mpCurrentKeyFrameMapPoints[j] -> totalVotes;
+					int &positiveVotes = mpCurrentKeyFrameMapPoints[j] -> positiveVotes;
+
+
+					// Add one general vote
+					totalVotes += 1;
+
+					// If its true, add a positive vote
+					if(pred){
+						positiveVotes += 1;
+					}
+
+				}
+
+			}
+
+		}
+
+		/*
+		cout << "Los keypoints de ORB en el patch son "<< keypointInPatch.size() << endl;
 
 
 		// If patch its 'yema',
 		if (pred){
 			cout << "Patch yema " << endl;
-			for( int j=0; j<coordsPatch.rows;j++){
-				//keypointsCount[image].push_back(coordenadasPatch.row(j));
-
-			}
 		}else{
 			cout << "Patch NO yema " << endl;
 		}
+		*/
 
 	}
 
-	// Get MapPoints of localmap of current keyframe associated to keypoints
-	//mpCurrentKeyFrameMapPoints = mpCurrentKeyFrame -> GetMapPoints();
-
-	//cout << "N° MapPoints Matches: " << mpCurrentKeyFrameMapPoints.size()  << endl << endl;
-
-	// Verify if mappoints have are in the current key frame (it should be true for all mappoints)
-	/*for (auto mp: mpCurrentKeyFrameMapPoints){
-		if ( !(mp -> IsInKeyFrame(mpCurrentKeyFrame) )){
-			cout << "No correspondence"  << endl;
-		}
-	}
-	*/
 
 }
 
-bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize, int iter, char* rFile)
+bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize, int iter, char* salida, char* rFile)
 {
+	cout<< "-------------------------------------------------" << endl;
 	// NO hay descriptores, devuelve false
 	if (SIFTdescriptors.empty()){
-		cout << "No descriptors in this patch" << endl;
+		//cout<< "-------------------------------------------------" << endl;
+		cout << "No keypoints in this patch" << endl;
+		cout<< "-------------------------------------------------" << endl;
 		return false;
 	}
 
-	cout << "en este patch cayeron "<<SIFTdescriptors.rows<<" keypoints \n";
+
+	cout << "The patch has: "<< SIFTdescriptors.rows <<" keypoints" << endl ;
 	//To store the dictionary
 	Mat dictionary;
 	//Read the stored dictionary
@@ -261,26 +347,24 @@ bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize
 	char * filedic = new char[100];
 	//create the file name of an image
 	sprintf(filedic, "%sdict-s%d.yml", modelsPath.c_str(), dictSize);
-	cout << "Path del diccionario: " << filedic << endl ;
+
 	FileStorage fs(filedic, FileStorage::READ);
 	fs["vocabulary"] >> dictionary;
 	fs.release();
+
+	// End read stored dictionary
+
 	//To store the BoF representation of the image
 	Mat bowDescriptor;
+
+
 	//create a nearest neighbor matcher and SIFT feature descriptor
-	cout << "bowDEscriptor creado "<< bowDescriptor  << endl;
-
-	//cv::Ptr<xfeatures2d::SIFT> detector = xfeatures2d::SIFT::create();
-
-	//Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
-	//cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create("FlannBased");
-
-	//create a nearest neighbor matcher
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
-	cout << "Matcher creado";
-	//create Sift feature point extracter
+
+
+	//Create Sift feature point extracter
 	cv::Ptr<xfeatures2d::SIFT> detector = xfeatures2d::SIFT::create();
-	cout << "Detector creado";
+	//Ptr<DescriptorExtractor> extractor = ORB::create();
 
 	//create BoF descriptor extractor
 	BOWImgDescriptorExtractor bowDE(detector, matcher);
@@ -292,11 +376,10 @@ bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize
 	bool pred = false;
 	//BoF descriptors classification
 	if (!(bowDescriptor.empty())) {
-		cout << "Bowdescriptor con algun elemento";
 		//To store the descriptor file name
 		char * filecsv = new char[200];
 		//the descriptor file with the location.
-		//sprintf(filecsv, "%s/hist-s25-it1.csv",salida);
+		sprintf(filecsv, "%shist-s25-it1.csv",salida);
 		//open the file to write the resultant descriptor
 		std::ofstream fs1(filecsv);
 		//image's info
@@ -307,9 +390,16 @@ bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize
 		sprintf(r_cmd, "R -q -e  \"source('%s');patchClassifier('%s', '%s', %d, %d)\"",rFile,
 						modelsPath.c_str(), filecsv, dictSize, iter);
 		const char* com = r_cmd;
-		string result;
+		string result = "";
 		// Result
 		char buffer[128];
+
+		/* Open the R file with the value of r_cmd (com). It has 2 parts
+		 * Where the R file is
+		 *  - source(rFile)
+		 * Params for patchClassifier function
+		 * - patchClassifier(models, file with descriptors, size of dictionary, iteration)
+		 */
 
 		FILE* pipe = popen(com, "r");
 		if (!pipe) throw std::runtime_error("popen() failed!");
@@ -324,17 +414,30 @@ bool Voting::PatchClass(cv::Mat SIFTdescriptors, string modelsPath, int dictSize
 		}
 		pclose(pipe);
 
-		cout << result <<endl;
+		/* The result has 3 parts:
+		 * - What goes into the function in r and the source of this
+		 * - The probabilities if that patch its bud (yema) or not
+		 * - And the probability to be bud
+		*/
+		//cout << result <<endl;
+
+		// Get the probability that it is bud and set in result
 		size_t found = result.find_last_of("]");
 		result = result.substr(found+2,string::npos);
-		(atof(result.c_str())>0.5)?pred=true:pred=false;
-		cout<< "resultado del clasificador "<<(pred? " true" : " false")<<endl;
+		cout << "Probabilidades de Yema: " << result << endl;
+		// If the result is more than  minValue, the prediction of the classifier its consider true
+		double minValue = 0.5;
+		(atof(result.c_str())>minValue)?pred=true:pred=false;
+
+
+		cout<< "Classificator result: "<< (pred? "true" : "false")<< endl;
+
+		// Command to remove the filsecsv generated
 		char* comando = new char[510];
 		sprintf(comando, "rm %s", filecsv);
 		std::system(comando);
 	} else
 		cout << "Error al calcular el BoF descriptor\n";
-		//todo umbral de clasificación
 	return pred;
 
 }
@@ -364,15 +467,19 @@ bool Voting::CheckNewKeyFrames()
     return(!mlKeyFramesVotingQueue.empty());
 }
 
-// This function catchs the first KF on the VotingQueue to be assign as the CurrentKeyFrame
+/* This function catchs the first KF on the VotingQueue to be assign as the CurrentKeyFrame
+ * If the KF is bad it is ignored and the following is extracted until it isnt bad
+ */
 
 void Voting::ProcessNewKeyFrame()
 {
+	do
     {
         unique_lock<mutex> lock(mMutexVotingQueue);
         mpCurrentKeyFrame = mlKeyFramesVotingQueue.front();
         mlKeyFramesVotingQueue.pop_front();
     }
+	while(mpCurrentKeyFrame -> isBad());
 }
 
 // This function allow to stop this thread

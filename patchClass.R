@@ -8,7 +8,7 @@ patchClassifier <- function(outputSVM, patchPath, dictSize, iter) {
 
     patchDesc <- read.csv(patchPath,header=FALSE)  
     colnames(patchDesc)<-NULL
-    print(patchDesc)
+    # print(patchDesc)
     # patchDesc <- t(as.numeric(t(unlist(strsplit(patchDesc, split=":")))))
     prefijo   <- paste0("s",dictSize,"_r1_it",iter) 
 
@@ -18,7 +18,7 @@ patchClassifier <- function(outputSVM, patchPath, dictSize, iter) {
     if (file.exists(fileBestSVM)){
         ## Carga el objeto 'bestSVM'
         load(fileBestSVM)
-        cat("Modelo SVM", fileBestSVM, " cargado\n")
+        # cat("Modelo SVM", fileBestSVM, " cargado\n")
     } else {
         cat("ERROR al leer modelo", fileBestSVM, "\n")
     }
